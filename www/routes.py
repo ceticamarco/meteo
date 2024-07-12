@@ -71,7 +71,6 @@ def __get_city_weather(coordinates: Tuple[float, float]) -> Dict[str, str | Tupl
     
     return { "emoji": condition_emoji, "temperature": (temperature_celsius, temperature_fahrenheit) }
 
-
 @app.route("/api/<city>", methods=["GET"])
 def meteo_route(city):
     # Retrieve unit of measurement. By default it will be set to "metric"
@@ -107,8 +106,8 @@ def meteo_route(city):
     temperature = f"{'+' if int(temperature) > 0 else ''}{temperature}"
 
     # Build result string
-    result = f"Weather conditions: {emoji}({temperature}"\
-             f"°{'C' if units == units.METRIC else 'F'})\n"
+    result = f"{emoji} {temperature}"\
+             f"°{'C' if units == units.METRIC else 'F'}\n"
 
     # Return the result
     return result, 200

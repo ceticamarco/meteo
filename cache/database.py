@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 type CacheADT = Dict[str, Tuple[Dict[str, str | Tuple[str, str]], datetime]]
 
 class Database:
-    def __init__(self,  ttl=4):
+    def __init__(self, ttl=4):
         self.ttl = ttl # Time to live in hours
         self.tmp = 0
         self.cache: CacheADT = dict() # key -> (value, date)

@@ -15,6 +15,5 @@ def main():
     # Start the webserver
     routes.launch_server(listen_address, listen_port, token)
 
-
 if __name__ == "__main__":
     main()

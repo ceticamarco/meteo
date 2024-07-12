@@ -1,0 +1,15 @@
+networks:
+  meteo:
+    external: false
+
+services:
+  app:
+    build: .
+    container_name: "meteo"
+    environment:
+      METEO_LISTEN_ADDRESS: "0.0.0.0" # Listen address
+      METEO_LISTEN_PORT: 9000 # Listen port 
+      METEO_TOKEN: "" # OpenWeatherMap API key
+    restart: always
+    ports:
+      - "9000:9000"
