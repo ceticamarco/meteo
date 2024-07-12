@@ -1,4 +1,4 @@
-# Meteo 🌦
+# Meteo 🌦 ![](https://github.com/ceticamarco/meteo/actions/workflows/meteo.yml/badge.svg)
 **Meteo** is a HTTP weather forecast service used to display weather conditions directly on your terminal or on the
 `tmux` status bar. This service is written in Python using Flask and relies on 
 [OpenWeatherMap](https://openweathermap.org) to retrieve meteorological data.

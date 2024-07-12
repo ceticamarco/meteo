@@ -1,0 +1,16 @@
+name: meteo
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker image
+        run: |
+          apt -y update && apt -y install docker.io docker-compose
+          docker-compose build
