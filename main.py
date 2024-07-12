@@ -1,5 +1,5 @@
 import os
-from routes import root
+from www import routes
 
 def main():
     # Check whether environment variables are defined
@@ -13,7 +13,7 @@ def main():
     token = os.environ["METEO_TOKEN"]
 
     # Start the webserver
-    root.launch_server(listen_address, listen_port, token)
+    routes.launch_server(listen_address, listen_port, token)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,15 @@
 from typing import Dict, Tuple
 from datetime import datetime, timedelta
 
+type CacheADT = Dict[str, Tuple[Dict[str, str | Tuple[str, str]], datetime]]
+
 class Database:
     def __init__(self,  ttl=4):
         self.ttl = ttl # Time to live in hours
         self.tmp = 0
-        self.cache: Dict[str, Tuple[Dict[str, str], datetime]] = dict() # key -> (value, date)
+        self.cache: CacheADT = dict() # key -> (value, date)
 
-    def add_key(self, key: str, value: Dict[str, str]) -> None:
+    def add_key(self, key: str, value: Dict[str, str | Tuple[str, str]]) -> None:
         ''' Given a key and a value, store it in the cache '''
         # Retrieve current datetime
         timestamp = datetime.now()
@@ -16,7 +18,7 @@ class Database:
         # Store value on the cache
         self.cache[key] = cached_value
 
-    def get_key(self, key: str) -> Dict[str, str] | None:
+    def get_key(self, key: str) -> Dict[str, str | Tuple[str, str]] | None:
         ''' Given a key, retrieve its value if and only if
             it exists in the cache and it is not expired '''
         # Check whether key exists in the cache
