@@ -13,4 +13,4 @@ jobs:
       - name: Build Docker image
         run: |
           apt -y update && apt -y install docker.io docker-compose
-          docker-compose build
+          ln -s compose.yml docker-compose.yml && docker-compose build
