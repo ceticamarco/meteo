@@ -11,7 +11,7 @@ To retrieve the weather conditions of your city, send a `GET` request to the fol
 in the URL. For example:
 
 ```sh
-$> curl 'http://127.0.0.1:9000/api/Rome'
+$> curl 'http://127.0.0.1:9000/meteo/Rome'
 ☀️  +35°C
 ```
 
@@ -20,13 +20,13 @@ the metric system. To format the temperature using the imperial system, you can 
 That is:
 
 ```sh
-$> curl 'http://127.0.0.1:9000/api/Rome?f'
+$> curl 'http://127.0.0.1:9000/meteo/Rome?f'
 ☀️  +95°F
 ```
 
 If your city consists on two or more words, you can format the URL as follows:
 ```sh
-$> curl 'http://127.0.0.1:9000/api/Buenos+Aires'
+$> curl 'http://127.0.0.1:9000/meteo/Buenos+Aires'
 ```
 
 ## Cache

@@ -24,7 +24,7 @@ class WebServer:
         # Initialize cache
         self.cache = database.Database(ttl=self.cache_ttl)
         # Register API route
-        self.app.add_url_rule("/api/<city>", view_func=self.meteo_route)
+        self.app.add_url_rule("/meteo/<city>", view_func=self.meteo_route)
 
     def __get_city_coordinates(self, city: str) -> Tuple[float, float] | Error:
         ''' Given the city name, return a tuple containing 

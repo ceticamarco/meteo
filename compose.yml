@@ -1,7 +1,3 @@
-networks:
-  meteo:
-    external: false
-
 services:
   app:
     build: .
