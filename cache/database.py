@@ -6,11 +6,16 @@ type CacheADT = Dict[str, Tuple[Dict[str, str | Tuple[str, str]], datetime]]
 class Database:
     def __init__(self, ttl=4):
         self.ttl = ttl # Time to live in hours
-        self.tmp = 0
         self.cache: CacheADT = dict() # key -> (value, date)
+
+    def __is_cache_enabled(self) -> bool:
+        ''' Return True if 'time-to-live' is greater than zero '''
+        return True if self.ttl > 0 else False
 
     def add_key(self, key: str, value: Dict[str, str | Tuple[str, str]]) -> None:
         ''' Given a key and a value, store it in the cache '''
+        # If cache is disabled, return without saving key
+        if not self.__is_cache_enabled(): return None
         # Retrieve current datetime
         timestamp = datetime.now()
         # Prepare cached value
@@ -21,6 +26,8 @@ class Database:
     def get_key(self, key: str) -> Dict[str, str | Tuple[str, str]] | None:
         ''' Given a key, retrieve its value if and only if
             it exists in the cache and it is not expired '''
+        # If cache is disabled, return None
+        if not self.__is_cache_enabled(): return None
         # Check whether key exists in the cache
         if not self.is_cached(key): return None 
 

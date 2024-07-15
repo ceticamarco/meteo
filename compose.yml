@@ -9,6 +9,7 @@ services:
     environment:
       METEO_LISTEN_ADDRESS: "0.0.0.0" # Listen address
       METEO_LISTEN_PORT: 9000 # Listen port 
+      METEO_CACHE_TTL: 4 # Cache time-to-live in hours
       METEO_TOKEN: "" # OpenWeatherMap API key
     restart: always
     ports:
