@@ -24,9 +24,32 @@ $> curl 'http://127.0.0.1:9000/meteo/Rome?f'
 ☀️  +95°F
 ```
 
-If your city consists on two or more words, you can format the URL as follows:
+If your city consists of two or more words, you can format the URL as follows:
 ```sh
 $> curl 'http://127.0.0.1:9000/meteo/Buenos+Aires'
+```
+
+**Meteo** can also be used to retrieve the percentage of humidity, the wind speed and the wind direction. Below
+there is an example:
+
+```sh
+# Retrieve humidity of Amsterdam
+$> curl 'http://127.0.0.1:9000/meteo/humidity/amsterdam'
+75%
+```
+
+```sh
+# Retrieve wind speed of Macao
+$> curl 'http://127.0.0.1:9000/meteo/wind/macao
+22.21kph E
+```
+
+To request the wind speed in MPH(Mile Per Hours) instead of KPM(Kilometers Per Hours), append
+the `?m` parameter to the URL. That is:
+
+```sh
+$> curl 'http://127.0.0.1:9000/meteo/wind/macao?m'
+13.8mph E
 ```
 
 ## Cache

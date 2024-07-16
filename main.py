@@ -15,7 +15,7 @@ def main():
 
     # Check whether API key is empty
     if not token:
-        print("'METEO_TOKEN cannot be empty")
+        print("'METEO_TOKEN' cannot be empty")
         return 1
 
     # Start the webserver

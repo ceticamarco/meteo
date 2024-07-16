@@ -1,7 +1,7 @@
 from flask import Flask
 from flask import request
 from gevent.pywsgi import WSGIServer
-from typing import Tuple, Dict
+from typing import Tuple, Dict, cast
 from enum import Enum
 from cache import database
 import requests
@@ -24,7 +24,9 @@ class WebServer:
         # Initialize cache
         self.cache = database.Database(ttl=self.cache_ttl)
         # Register API route
-        self.app.add_url_rule("/meteo/<city>", view_func=self.meteo_route)
+        self.app.add_url_rule("/meteo/<city>", view_func=self.weather_route)
+        self.app.add_url_rule("/meteo/humidity/<city>", view_func=self.humidity_route)
+        self.app.add_url_rule("/meteo/wind/<city>", view_func=self.wind_route)
 
     def __get_city_coordinates(self, city: str) -> Tuple[float, float] | Error:
         ''' Given the city name, return a tuple containing 
@@ -41,8 +43,8 @@ class WebServer:
         ''' Given a weather condition return an emoji '''
         conditions_map = {
             "Thunderstorm": "⛈️",
-            "Drizzle": "🌦",
-            "Rain": "🌧",
+            "Drizzle": "🌦 ",
+            "Rain": "🌧 ",
             "Snow": "☃️",
             "Mist": "💭",
             "Smoke": "💭",
@@ -52,7 +54,7 @@ class WebServer:
             "Sand": "💭",
             "Ash": "💭",
             "Squall": "💭",
-            "Tornado": "🌪",
+            "Tornado": "🌪 ",
             "Clear": "☀️",
             "Clouds": "☁️"
         }
@@ -77,7 +79,125 @@ class WebServer:
         
         return { "emoji": condition_emoji, "temperature": (temperature_celsius, temperature_fahrenheit) }
 
-    def meteo_route(self, city) -> None:
+    def __get_city_humidity(self, coordinates: Tuple[float, float]) -> Dict[str, str]:
+        ''' Given the coordinates of a city, returns its humidity level(in percentage) '''
+        url = f"https://api.openweathermap.org/data/2.5/weather?units=metric"\
+              f"&lat={coordinates[0]}&lon={coordinates[1]}&appid={self.token}"
+        res = requests.get(url).json()
+
+        # Extract the humidity level
+        humidity = res["main"]["humidity"]
+
+        return { "value": humidity }
+
+    def __get_city_wind(self, coordinates: Tuple[float, float]) -> Dict[str, str]:
+        ''' Given the coordinates of a city, returns its wind speed and its direction '''
+        url = f"https://api.openweathermap.org/data/2.5/weather?units=metric"\
+              f"&lat={coordinates[0]}&lon={coordinates[1]}&appid={self.token}"
+        res = requests.get(url).json()
+
+        # Extract wind fields
+        wind_speed = res["wind"]["speed"]
+        wind_deg = int(res["wind"]["deg"])
+
+        # Map wind degree to cardinal direction
+        # Each cardinal direction represent a segment of 22.5 degrees
+        cardinal_directions = [
+            "N",   # 0/360 DEG
+            "NNE", # 22.5 DEG
+            "NE",  # 45 DEG
+            "ENE", # 67.5 DEG
+            "E",   # 90 DEG
+            "ESE", # 112.5 DEG
+            "SE",  # 135 DEG
+            "SSE", # 157.5 DEG
+            "S",   # 180 DEG
+            "SSW", # 202.5 DEG
+            "SW",  # 225 DEG
+            "WSW", # 247.5 DEG
+            "W",   # 270 DEG
+            "WNW", # 292.5 DEG
+            "NW",  # 315 DEG
+            "NNW", # 337.5 DEG
+        ]
+        
+        # We compute "idx ≡ round(wind_deg / 22.5) (mod 16)" 
+        # to ensure that values above 360 degrees or below 0 degrees
+        # "stay" bounded to the map
+        idx = round(wind_deg / 22.5) % 16
+
+        # Get wind direction
+        wind_direction = cardinal_directions[idx]
+
+
+        return { "speed": wind_speed, "direction": wind_direction }   
+
+
+    def humidity_route(self, city):
+        # Check if city already exists on the cache
+        cached_value = self.cache.get_key(f"{city}_humidity")
+        if cached_value is not None:
+            humidity = cached_value
+        else:
+            # Retrieve coordinates from city name
+            coordinates = self.__get_city_coordinates(city)
+
+            # Check if city exists
+            if isinstance(coordinates, Error):
+                return coordinates, 400
+
+            # Retrieve city humidity
+            humidity = self.__get_city_humidity(coordinates)
+            # Save humidity into the cache
+            self.cache.add_key(f"{city}_humidity", cast(Dict[str, str | Tuple[str, str]], humidity))
+
+        # Build result string
+        result = f"{humidity['value']}%\n"
+
+        # Return the result
+        return result, 200
+
+    def wind_route(self, city):
+        # Retrieve unit of measurement. By default, it will be set to "metric"
+        if request.args.get("m") is not None:
+            units = Units.IMPERIAL
+        else:
+            units = Units.METRIC
+
+        # Check if city already exists on the cache
+        cached_value = self.cache.get_key(f"{city}_wind")
+        if cached_value is not None:
+            wind = cached_value
+        else:
+            # Retrieve coordinates from city name
+            coordinates = self.__get_city_coordinates(city)
+
+            # Check if city exists
+            if isinstance(coordinates, Error):
+                return coordinates, 400
+
+            # Retrieve city wind
+            wind = self.__get_city_wind(coordinates)
+            # Save wind into the cache
+            self.cache.add_key(f"{city}_wind", cast(Dict[str, str | Tuple[str, str]], wind))
+
+        # Convert wind speed(by default represented in m/s) according to the unit of measurement 
+        # 1 m/s = 2.23694 mph
+        # 1 m/s = 3.6 kph
+        wind_speed = str(wind["speed"])
+        wind_speed = float(wind_speed) * 2.23694 if units == Units.IMPERIAL else float(wind_speed) * 3.6
+
+        # Extract wind direction
+        wind_direction = str(wind["direction"])
+
+        # Build result string
+        result = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction}\n"
+
+        # Return the result
+        return result, 200
+
+
+    def weather_route(self, city):
         # Retrieve unit of measurement. By default it will be set to "metric"
         if request.args.get("f") is not None:
             units = Units.IMPERIAL
@@ -85,7 +205,7 @@ class WebServer:
             units = Units.METRIC
 
         # Check if city already exists on the cache
-        cached_value = self.cache.get_key(city)
+        cached_value = self.cache.get_key(f"{city}_weather")
         if cached_value is not None:
             weather = cached_value
         else:
@@ -99,7 +219,7 @@ class WebServer:
             # Retrieve city weather
             weather = self.__get_city_weather(coordinates)
             # Save weather into the cache
-            self.cache.add_key(city, weather)
+            self.cache.add_key(f"{city}_weather", weather)
 
         # Extract weather condition icon
         emoji = str(weather["emoji"])
