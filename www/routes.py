@@ -27,6 +27,7 @@ class WebServer:
         self.app.add_url_rule("/meteo/<city>", view_func=self.weather_route)
         self.app.add_url_rule("/meteo/humidity/<city>", view_func=self.humidity_route)
         self.app.add_url_rule("/meteo/wind/<city>", view_func=self.wind_route)
+        self.app.add_url_rule("/meteo/report/<city>", view_func=self.report_route)
 
     def __get_city_coordinates(self, city: str) -> Tuple[float, float] | Error:
         ''' Given the city name, return a tuple containing 
@@ -196,9 +197,91 @@ class WebServer:
         # Return the result
         return result, 200
 
+    def report_route(self, city):
+        # Retrieve unit of measurement. By default it will be set to "metric"
+        if request.args.get("i") is not None:
+            units = Units.IMPERIAL
+        else:
+            units = Units.METRIC
+
+        # Check if weather already exists on the cache
+        cached_weather = self.cache.get_key(f"{city}_weather")
+        if cached_weather is not None:
+            weather = cached_weather
+        else:
+            coordinates = self.__get_city_coordinates(city)
+
+            # Check if city exists
+            if isinstance(coordinates, Error):
+                return coordinates, 400
+
+            # Retrieve city weather
+            weather = self.__get_city_weather(coordinates)
+            # Save wwather into the cache
+            self.cache.add_key(f"{city}_weather", weather)
+
+        # Check if humidity already exists on the cache
+        cached_humidity = self.cache.get_key(f"{city}_humidity")
+        if cached_humidity is not None:
+            humidity = cached_humidity
+        else:
+            coordinates = self.__get_city_coordinates(city)
+            # Retrieve city humidity
+            humidity = self.__get_city_humidity(cast(Tuple[float, float], coordinates))
+            # Save humidity into the cache
+            self.cache.add_key(f"{city}_humidity", cast(Dict[str, str | Tuple[str, str]], humidity))
+
+        # Check if wind already exists on the cache
+        cached_wind = self.cache.get_key(f"{city}_wind")
+        if cached_wind is not None:
+            wind = cached_wind
+        else:
+            # Retrieve coordinates from city name
+            coordinates = self.__get_city_coordinates(city)
+
+            # Retrieve city wind
+            wind = self.__get_city_wind(cast(Tuple[float, float], coordinates))
+            # Save wind into the cache
+            self.cache.add_key(f"{city}_wind", cast(Dict[str, str | Tuple[str, str]], wind))
+
+
+        # Extract weather condition icon
+        emoji = str(weather["emoji"])
+
+        # Extract the appropriate temperature based on the unit of measurement
+        temperature = weather["temperature"][0] if units == Units.METRIC else weather["temperature"][1]
+
+        # Add '+' sign to temperature if it is positive
+        temperature = f"{'+' if int(temperature) > 0 else ''}{temperature}"
+
+        # Convert wind speed(by default represented in m/s) according to the unit of measurement 
+        wind_speed = str(wind["speed"])
+        wind_speed = float(wind_speed) * 2.23694 if units == Units.IMPERIAL else float(wind_speed) * 3.6
+
+        # Extract wind direction
+        wind_direction = str(wind["direction"])
+
+        # Build weather condition string
+        weather_condition = f"{emoji} {temperature}°{'C' if units == units.METRIC else 'F'}"
+
+        # Build humidity string
+        humidity_condition = f"{humidity['value']}%"
+
+        # Build wind string
+        wind_condition = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction}\n"
+
+        # Build reseult string
+        report = f"Condition:              {weather_condition}\n"\
+                 f"Humidity:               {humidity_condition}\n"\
+                 f"Wind:                   {wind_condition}"
+
+
+        # Return the result
+        return report, 200
+
 
     def weather_route(self, city):
-        # Retrieve unit of measurement. By default it will be set to "metric"
+        # Retrieve unit of measurement. By default it will be set to "celsius"
         if request.args.get("f") is not None:
             units = Units.IMPERIAL
         else:

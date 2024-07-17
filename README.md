@@ -52,6 +52,24 @@ $> curl 'http://127.0.0.1:9000/meteo/wind/macao?m'
 13.8mph E
 ```
 
+You can also request all the previous data together by querying the following endpoint:
+
+```sh
+$> curl 'http://127.0.0.1:9000/meteo/report/St+Moritz'
+Condition:              ☁️  +15°C
+Humidity:               77%
+Wind:                   1.84kph N
+```
+
+To format the report using the imperial units of measurements, append the `?i` parameter to the URL. That is:
+
+```sh
+$> curl 'http://127.0.0.1:9000/meteo/report/St+Moritz?i'
+Condition:              ☁️  +59°F
+Humidity:               77%
+Wind:                   1.14mph N
+```
+
 ## Cache
 To minimize the amount of calls to the OpenWeatherMap servers, **Meteo** stores the weather data in a
 built-in, in-memory cache data structure. Each time a client requests the weather of a given location, **Meteo**
