@@ -10,7 +10,7 @@ itsdangerous==2.2.0
 Jinja2==3.1.4
 MarkupSafe==2.1.5
 requests==2.32.3
-setuptools==70.3.0
+setuptools==71.1.0
 urllib3==2.2.2
 Werkzeug==3.0.3
 zope.event==5.0

@@ -40,8 +40,8 @@ $> curl 'http://127.0.0.1:9000/meteo/humidity/amsterdam'
 
 ```sh
 # Retrieve wind speed of Macao
-$> curl 'http://127.0.0.1:9000/meteo/wind/macao
-22.21kph E
+$> curl 'http://127.0.0.1:9000/meteo/wind/macao'
+18.5kph SSW ⇘
 ```
 
 To request the wind speed in MPH(Mile Per Hours) instead of KPM(Kilometers Per Hours), append
@@ -49,25 +49,34 @@ the `?m` parameter to the URL. That is:
 
 ```sh
 $> curl 'http://127.0.0.1:9000/meteo/wind/macao?m'
-13.8mph E
+11.5mph SSW ⇘
 ```
 
 You can also request all the previous data together by querying the following endpoint:
 
 ```sh
 $> curl 'http://127.0.0.1:9000/meteo/report/St+Moritz'
-Condition:              ☁️  +15°C
-Humidity:               77%
-Wind:                   1.84kph N
+Condition:  ☁️  +15°C
+Humidity:   67%
+Wind:       3.71kph SW ↙
 ```
 
 To format the report using the imperial units of measurements, append the `?i` parameter to the URL. That is:
 
 ```sh
 $> curl 'http://127.0.0.1:9000/meteo/report/St+Moritz?i'
-Condition:              ☁️  +59°F
-Humidity:               77%
-Wind:                   1.14mph N
+Condition:  ☁️  +59°F
+Humidity:   67%
+Wind:       2.3mph SW ↙
+```
+
+You can also request the report in JSON by appending the `?j` parameter to the URL. That is:
+
+```sh
+$> curl 'http://127.0.0.1:9000/meteo/report/Montecarlo?j' # Metric version
+{"Condition": "\u2600\ufe0f +32\u00b0C", "Humidity": "49%", "Wind": "3.2kph SE \u2198"}%
+$> curl 'http://127.0.0.1:9000/meteo/report/Montecarlo?j&i' # Imperial version
+{"Condition": "\u2600\ufe0f +90\u00b0F", "Humidity": "49%", "Wind": "1.99mph SE \u2198"}%
 ```
 
 ## Cache

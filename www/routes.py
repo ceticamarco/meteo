@@ -1,9 +1,10 @@
 from flask import Flask
 from flask import request
 from gevent.pywsgi import WSGIServer
-from typing import Tuple, Dict, cast
+from typing import Tuple, Dict, List, cast
 from enum import Enum
 from cache import database
+import json
 import requests
 
 class Units(Enum):
@@ -103,23 +104,23 @@ class WebServer:
 
         # Map wind degree to cardinal direction
         # Each cardinal direction represent a segment of 22.5 degrees
-        cardinal_directions = [
-            "N",   # 0/360 DEG
-            "NNE", # 22.5 DEG
-            "NE",  # 45 DEG
-            "ENE", # 67.5 DEG
-            "E",   # 90 DEG
-            "ESE", # 112.5 DEG
-            "SE",  # 135 DEG
-            "SSE", # 157.5 DEG
-            "S",   # 180 DEG
-            "SSW", # 202.5 DEG
-            "SW",  # 225 DEG
-            "WSW", # 247.5 DEG
-            "W",   # 270 DEG
-            "WNW", # 292.5 DEG
-            "NW",  # 315 DEG
-            "NNW", # 337.5 DEG
+        cardinal_directions: List[Tuple[str, str]] = [
+            ("N", "↑"),   # 0/360 DEG
+            ("NNE", "⇗"), # 22.5 DEG
+            ("NE",  "↗"), # 45 DEG
+            ("ENE", "⇖"), # 67.5 DEG
+            ("E",   "→"), # 90 DEG
+            ("ESE", "⇘"), # 112.5 DEG
+            ("SE",  "↘"), # 135 DEG
+            ("SSE", "⇙"), # 157.5 DEG
+            ("S",   "↓"), # 180 DEG
+            ("SSW", "⇘"), # 202.5 DEG
+            ("SW",  "↙"), # 225 DEG
+            ("WSW", "⇖"), # 247.5 DEG
+            ("W",   "←"), # 270 DEG
+            ("WNW", "⇗"), # 292.5 DEG
+            ("NW",  "↖"), # 315 DEG
+            ("NNW", "⇖"), # 337.5 DEG
         ]
         
         # We compute "idx ≡ round(wind_deg / 22.5) (mod 16)" 
@@ -127,11 +128,12 @@ class WebServer:
         # "stay" bounded to the map
         idx = round(wind_deg / 22.5) % 16
 
-        # Get wind direction
-        wind_direction = cardinal_directions[idx]
+        # Get wind direction and direction icon
+        wind_direction = cardinal_directions[idx][0]
+        wind_icon = cardinal_directions[idx][1]
 
 
-        return { "speed": wind_speed, "direction": wind_direction }   
+        return { "speed": wind_speed, "direction": wind_direction, "icon": wind_icon }
 
 
     def humidity_route(self, city):
@@ -190,9 +192,10 @@ class WebServer:
 
         # Extract wind direction
         wind_direction = str(wind["direction"])
+        wind_icon = str(wind["icon"])
 
         # Build result string
-        result = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction}\n"
+        result = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction} {wind_icon}\n"
 
         # Return the result
         return result, 200
@@ -260,6 +263,7 @@ class WebServer:
 
         # Extract wind direction
         wind_direction = str(wind["direction"])
+        wind_icon = str(wind["icon"])
 
         # Build weather condition string
         weather_condition = f"{emoji} {temperature}°{'C' if units == units.METRIC else 'F'}"
@@ -268,12 +272,22 @@ class WebServer:
         humidity_condition = f"{humidity['value']}%"
 
         # Build wind string
-        wind_condition = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction}\n"
+        wind_condition = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction} {wind_icon}"
 
-        # Build reseult string
-        report = f"Condition:              {weather_condition}\n"\
-                 f"Humidity:               {humidity_condition}\n"\
-                 f"Wind:                   {wind_condition}"
+        # Build reseult string according to the requested format
+        if request.args.get("j") is not None:
+            # Format report as JSON data
+            report = {
+                "Condition": weather_condition,
+                "Humidity": humidity_condition,
+                "Wind": wind_condition
+            }
+            report = json.dumps(report)
+        else:
+            # Format report as raw data
+            report = f"Condition:  {weather_condition}\n"\
+                     f"Humidity:   {humidity_condition}\n"\
+                     f"Wind:       {wind_condition}\n"
 
 
         # Return the result
