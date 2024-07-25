@@ -4,6 +4,7 @@ from gevent.pywsgi import WSGIServer
 from typing import Tuple, Dict, List, cast
 from enum import Enum
 from cache import database
+from datetime import datetime, time
 import json
 import requests
 
@@ -60,6 +61,11 @@ class WebServer:
             "Clear": "☀️",
             "Clouds": "☁️"
         }
+
+        # If condition is "clear" and it's nighttime, return 🌙 instead of ☀️
+        now = datetime.now().time()
+        if condition == "Clear" and (now >= time(22,00) or now <= time(7,00)):
+            return "🌙"
 
         return conditions_map[condition]
 

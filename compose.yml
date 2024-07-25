@@ -8,5 +8,7 @@ services:
       METEO_CACHE_TTL: 4 # Cache time-to-live in hours
       METEO_TOKEN: "" # OpenWeatherMap API key
     restart: always
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
     ports:
       - "9000:9000"
