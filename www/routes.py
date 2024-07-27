@@ -111,22 +111,22 @@ class WebServer:
         # Map wind degree to cardinal direction
         # Each cardinal direction represent a segment of 22.5 degrees
         cardinal_directions: List[Tuple[str, str]] = [
-            ("N", "↑"),   # 0/360 DEG
-            ("NNE", "⇗"), # 22.5 DEG
-            ("NE",  "↗"), # 45 DEG
-            ("ENE", "⇖"), # 67.5 DEG
-            ("E",   "→"), # 90 DEG
-            ("ESE", "⇘"), # 112.5 DEG
-            ("SE",  "↘"), # 135 DEG
-            ("SSE", "⇙"), # 157.5 DEG
-            ("S",   "↓"), # 180 DEG
-            ("SSW", "⇘"), # 202.5 DEG
-            ("SW",  "↙"), # 225 DEG
-            ("WSW", "⇖"), # 247.5 DEG
-            ("W",   "←"), # 270 DEG
-            ("WNW", "⇗"), # 292.5 DEG
-            ("NW",  "↖"), # 315 DEG
-            ("NNW", "⇖"), # 337.5 DEG
+            ("N", "↓"),   # 0/360 DEG
+            ("NNE", "↙"), # 22.5 DEG
+            ("NE",  "↙"), # 45 DEG
+            ("ENE", "↙"), # 67.5 DEG
+            ("E",   "←"), # 90 DEG
+            ("ESE", "↖"), # 112.5 DEG
+            ("SE",  "↖"), # 135 DEG
+            ("SSE", "↖"), # 157.5 DEG
+            ("S",   "↑"), # 180 DEG
+            ("SSW", "↗"), # 202.5 DEG
+            ("SW",  "↗"), # 225 DEG
+            ("WSW", "↗"), # 247.5 DEG
+            ("W",   "→"), # 270 DEG
+            ("WNW", "↘"), # 292.5 DEG
+            ("NW",  "↘"), # 315 DEG
+            ("NNW", "↘"), # 337.5 DEG
         ]
         
         # We compute "idx ≡ round(wind_deg / 22.5) (mod 16)" 
