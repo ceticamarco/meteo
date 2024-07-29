@@ -13,4 +13,4 @@ jobs:
         run: |
           mv compose.yml docker-compose.yml
           echo -e "version: \"2.2\"\n$(cat docker-compose.yml)" > docker-compose.yml
-          docker-compose build
+          docker compose build

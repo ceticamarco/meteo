@@ -64,7 +64,7 @@ class WebServer:
 
         # If condition is "clear" and it's nighttime, return 🌙 instead of ☀️
         now = datetime.now().time()
-        if condition == "Clear" and (now >= time(22,00) or now <= time(7,00)):
+        if condition == "Clear" and (now >= time(20,00) or now <= time(7,00)):
             return "🌙"
 
         return conditions_map[condition]
@@ -201,7 +201,7 @@ class WebServer:
         wind_icon = str(wind["icon"])
 
         # Build result string
-        result = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction} {wind_icon}\n"
+        result = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'km/h'} {wind_direction} {wind_icon}\n"
 
         # Return the result
         return result, 200
@@ -278,7 +278,7 @@ class WebServer:
         humidity_condition = f"{humidity['value']}%"
 
         # Build wind string
-        wind_condition = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'kph'} {wind_direction} {wind_icon}"
+        wind_condition = f"{round(wind_speed, 2)}{'mph' if units == Units.IMPERIAL else 'km/h'} {wind_direction} {wind_icon}"
 
         # Build reseult string according to the requested format
         if request.args.get("j") is not None:
