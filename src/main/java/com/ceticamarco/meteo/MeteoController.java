@@ -23,8 +23,8 @@ public class MeteoController {
 
     @GetMapping("/meteo/{city}")
     public ResponseEntity<String> getWeatherByCity(@PathVariable("city") String city,
-                                                   @RequestParam(required = false) String f) throws IOException, InterruptedException {
-        Units units = f != null ? Units.IMPERIAL : Units.METRIC;
+                                                   @RequestParam(required = false) String i) throws IOException, InterruptedException {
+        Units units = i != null ? Units.IMPERIAL : Units.METRIC;
 
         var result = meteoService.getWeather(city, units);
 
@@ -45,8 +45,16 @@ public class MeteoController {
     }
 
     @GetMapping("/meteo/wind/{city}")
-    public ResponseEntity<String> getWindByCity(@PathVariable("city") String city) {
-        return new ResponseEntity<>("City wind", HttpStatus.OK);
+    public ResponseEntity<String> getWindByCity(@PathVariable("city") String city,
+                                                @RequestParam(required = false) String i) throws IOException, InterruptedException {
+        Units units = i != null ? Units.IMPERIAL : Units.METRIC;
+
+        var result = meteoService.getWind(city, units);
+
+        switch (result) {
+            case Left<Error, String> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
+            case Right<Error, String> content -> { return new ResponseEntity<>(content.value(), HttpStatus.OK); }
+        }
     }
 
     @GetMapping("/meteo/report/{city}")

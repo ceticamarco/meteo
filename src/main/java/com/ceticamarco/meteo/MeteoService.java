@@ -20,6 +20,7 @@ public class MeteoService {
     private final String API_KEY;
     private final HashMap<String, String> conditionsMap = new HashMap<>();
     private record WeatherResult(double fahrenheit_t, double celsius_t, String emoji) {}
+    private record WindResult(double speed, String direction, String icon) {}
 
     private Either<Error, double[]> getCityCoordinates(String city) throws IOException, InterruptedException {
         String api_uri = String.format("https://api.openweathermap.org/geo/1.0/direct?q=%s&limit=5&appid=%s", city, API_KEY);
@@ -126,6 +127,64 @@ public class MeteoService {
         return humidity;
     }
 
+    private WindResult getCityWind(double[] coordinates) throws IOException, InterruptedException {
+        String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
+                coordinates[0], coordinates[1], API_KEY);
+        HttpClient httpClient = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(api_uri))
+                .GET()
+                .build();
+
+        HttpResponse<String> jsonRes = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        double windSpeed = 0;
+        int windDegree = 0;
+        try {
+            var objectMapper = new ObjectMapper();
+            var root = objectMapper.readTree(jsonRes.body());
+
+            windSpeed = root.get("wind").get("speed").asDouble();
+            windDegree = root.get("wind").get("deg").asInt();
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        // Map wind degree to cardinal direction
+        // Each cardinal direction represent a segment of 22.5 degrees
+        String[][] cardinalDirections = {
+            {"N", "↓"},   // 0/360 DEG
+            {"NNE", "↙"}, // 22.5 DEG
+            {"NE",  "↙"}, // 45 DEG
+            {"ENE", "↙"}, // 67.5 DEG
+            {"E",   "←"}, // 90 DEG
+            {"ESE", "↖"}, // 112.5 DEG
+            {"SE",  "↖"}, // 135 DEG
+            {"SSE", "↖"}, // 157.5 DEG
+            {"S",   "↑"}, // 180 DEG
+            {"SSW", "↗"}, // 202.5 DEG
+            {"SW",  "↗"}, // 225 DEG
+            {"WSW", "↗"}, // 247.5 DEG
+            {"W",   "→"}, // 270 DEG
+            {"WNW", "↘"}, // 292.5 DEG
+            {"NW",  "↘"}, // 315 DEG
+            {"NNW", "↘"}, // 337.5 DEG
+        };
+
+        // Computes "idx ≡ round(wind_deg / 22.5) (mod 16)"
+        // to ensure that values above 360 degrees or below 0 degrees
+        // "stay" bounded to the map
+        var idx = (int)Math.round(windDegree / 22.5) % 16;
+        var windDirection = cardinalDirections[idx][0];
+        var windIcon = cardinalDirections[idx][1];
+
+        httpClient.close();
+
+        return new WindResult(windSpeed, windDirection, windIcon);
+    }
+
 
     public MeteoService() {
         // Read OpenWeatherMap API token
@@ -179,5 +238,34 @@ public class MeteoService {
         humidity += "%\n";
 
         return new Right<>(humidity);
+    }
+
+    public Either<Error, String> getWind(String city, Units units) throws IOException, InterruptedException {
+        // TODO: Check the cache
+        var coordinatesEither = getCityCoordinates(city);
+        if(coordinatesEither.isLeft()) {
+            return new Left<>(coordinatesEither.fromLeft(new Error("")));
+        }
+
+        var wind = getCityWind(coordinatesEither.fromRight(new double[]{}));
+        // TODO: Save value onto the cache
+
+        // Convert wind speed(by default represented in m/s) according to the unit of measurement
+        // 1 m/s = 2.23694 mph
+        // 1 m/s = 3.6 kph
+        var wind_speed = wind.speed;
+        wind_speed = units == Units.IMPERIAL ? (wind_speed * 2.23694) : (wind_speed * 3.6);
+
+        var wind_direction = wind.direction;
+        var wind_icon = wind.icon;
+
+        var fmt_wind = String.format("%.2f%s %s %s\n",
+                wind_speed,
+                units == Units.IMPERIAL ? "mph" : "km/h",
+                wind_direction,
+                wind_icon
+        );
+
+        return new Right<>(fmt_wind);
     }
 }
