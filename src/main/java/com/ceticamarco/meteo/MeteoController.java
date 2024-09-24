@@ -35,8 +35,13 @@ public class MeteoController {
     }
 
     @GetMapping("/meteo/humidity/{city}")
-    public ResponseEntity<String> getHumidityByCity(@PathVariable("city") String city) {
-        return new ResponseEntity<>("City humidity", HttpStatus.OK);
+    public ResponseEntity<String> getHumidityByCity(@PathVariable("city") String city) throws IOException, InterruptedException {
+        var result = meteoService.getHumidity(city);
+
+        switch (result) {
+            case Left<Error, String> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
+            case Right<Error, String> content -> { return new ResponseEntity<>(content.value(), HttpStatus.OK); }
+        }
     }
 
     @GetMapping("/meteo/wind/{city}")

@@ -33,7 +33,7 @@ public class MeteoService {
         HttpResponse<String> jsonRes = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (jsonRes.body().equals("[]")) {
-            return new Left<>(new Error("Cannot find this city"));
+            return new Left<>(new Error("Cannot find this city\n"));
         }
 
         double[] coordinates = new double[2];
@@ -53,6 +53,19 @@ public class MeteoService {
         httpClient.close();
 
         return new Right<>(coordinates);
+    }
+
+    private String getEmojiFromCondition(String condition) {
+        LocalTime now = LocalTime.now();
+        LocalTime evening = LocalTime.of(20, 0);
+        LocalTime morning = LocalTime.of(7, 0);
+
+        // If weather condition is "clear" and localtime is between 08:00 PM and 07:00 AM
+        if (Objects.equals(condition, "Clear") && (now.isAfter(evening) || now.isBefore(morning))) {
+            return "🌙";
+        }
+
+        return this.conditionsMap.get(condition);
     }
 
     private WeatherResult getCityWeather(double[] coordinates) throws IOException, InterruptedException {
@@ -86,17 +99,31 @@ public class MeteoService {
         return weatherResult;
     }
 
-    private String getEmojiFromCondition(String condition) {
-        LocalTime now = LocalTime.now();
-        LocalTime evening = LocalTime.of(20, 0);
-        LocalTime morning = LocalTime.of(7, 0);
+    public String getCityHumidity(double[] coordinates) throws IOException, InterruptedException {
+        String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
+                coordinates[0], coordinates[1], API_KEY);
+        HttpClient httpClient = HttpClient.newHttpClient();
 
-        // If weather condition is "clear" and localtime is between 08:00 PM and 07:00 AM
-        if (Objects.equals(condition, "Clear") && (now.isAfter(evening) || now.isBefore(morning))) {
-            return "🌙";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(api_uri))
+                .GET()
+                .build();
+
+        HttpResponse<String> jsonRes = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        String humidity = "";
+        try {
+            var objectMapper = new ObjectMapper();
+            var root = objectMapper.readTree(jsonRes.body());
+
+            humidity = root.get("main").get("humidity").asText();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
 
-        return this.conditionsMap.get(condition);
+        httpClient.close();
+
+        return humidity;
     }
 
 
@@ -134,8 +161,23 @@ public class MeteoService {
         var temperature = units == Units.METRIC ? weatherResult.celsius_t : weatherResult.fahrenheit_t;
         var fmt_temp = temperature > 0.0 ? String.format("+%d", (int)temperature) : String.valueOf((int)temperature);
         var fmt_units = units == Units.METRIC ? 'C' : 'F';
-        var fmt_weather = String.format("%s %s °%c\n", emoji, fmt_temp, fmt_units);
+        var fmt_weather = String.format("%s %s°%c\n", emoji, fmt_temp, fmt_units);
 
         return new Right<>(fmt_weather);
+    }
+
+    public Either<Error, String> getHumidity(String city) throws IOException, InterruptedException {
+        // TODO: Check the cache
+        var coordinatesEither = getCityCoordinates(city);
+        if(coordinatesEither.isLeft()) {
+            return new Left<>(coordinatesEither.fromLeft(new Error("")));
+        }
+
+        var humidity = getCityHumidity(coordinatesEither.fromRight(new double[]{}));
+        // TODO: Save value onto the cache
+
+        humidity += "%\n";
+
+        return new Right<>(humidity);
     }
 }
