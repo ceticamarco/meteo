@@ -1,5 +1,8 @@
 package com.ceticamarco.meteo;
 
+import com.ceticamarco.Result.HumidityResult;
+import com.ceticamarco.Result.WeatherResult;
+import com.ceticamarco.Result.WindResult;
 import com.ceticamarco.cache.Cache;
 import com.ceticamarco.lambdatonic.Either;
 import com.ceticamarco.lambdatonic.Left;
@@ -23,8 +26,6 @@ public class MeteoService {
     private final Cache cache;
     private final String API_KEY;
     private final HashMap<String, String> conditionsMap = new HashMap<>();
-    private record WeatherResult(double fahrenheit_t, double celsius_t, String emoji) {}
-    private record WindResult(double speed, String direction, String icon) {}
 
     private Either<Error, double[]> getCityCoordinates(String city) throws IOException, InterruptedException {
         String api_uri = String.format("https://api.openweathermap.org/geo/1.0/direct?q=%s&limit=5&appid=%s", city, API_KEY);
@@ -104,7 +105,7 @@ public class MeteoService {
         return weatherResult;
     }
 
-    public String getCityHumidity(double[] coordinates) throws IOException, InterruptedException {
+    public HumidityResult getCityHumidity(double[] coordinates) throws IOException, InterruptedException {
         String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
                 coordinates[0], coordinates[1], API_KEY);
         HttpClient httpClient = HttpClient.newHttpClient();
@@ -116,12 +117,12 @@ public class MeteoService {
 
         HttpResponse<String> jsonRes = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        String humidity = "";
+        HumidityResult humidity = new HumidityResult("");
         try {
             var objectMapper = new ObjectMapper();
             var root = objectMapper.readTree(jsonRes.body());
 
-            humidity = root.get("main").get("humidity").asText();
+            humidity = new HumidityResult(root.get("main").get("humidity").asText());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -212,14 +213,20 @@ public class MeteoService {
     }
 
     public Either<Error, String> getWeather(String city, Units units) throws IOException, InterruptedException {
-        // TODO: Check the cache
-        var coordinatesEither = getCityCoordinates(city);
-        if(coordinatesEither.isLeft()) {
-            return new Left<>(coordinatesEither.fromLeft(new Error("")));
+        WeatherResult weatherResult;
+
+        // Check whether the value exists in the cache
+        if(this.cache.getValue(String.format("%s_weather", city)).isPresent()) {
+            weatherResult = (WeatherResult)this.cache.getValue(String.format("%s_weather", city)).get();
+        } else {
+            var coordinatesEither = getCityCoordinates(city);
+            if (coordinatesEither.isLeft()) {
+                return new Left<>(coordinatesEither.fromLeft(new Error("")));
+            }
+            weatherResult = getCityWeather(coordinatesEither.fromRight(new double[]{}));
+            this.cache.addValue(String.format("%s_weather", city), weatherResult);
         }
 
-        var weatherResult = getCityWeather(coordinatesEither.fromRight(new double[]{}));
-        // TODO: Save value onto the cache
         var emoji = weatherResult.emoji;
         var temperature = units == Units.METRIC ? weatherResult.celsius_t : weatherResult.fahrenheit_t;
         var fmt_temp = temperature > 0.0 ? String.format("+%d", (int)temperature) : String.valueOf((int)temperature);
@@ -230,38 +237,51 @@ public class MeteoService {
     }
 
     public Either<Error, String> getHumidity(String city) throws IOException, InterruptedException {
-        // TODO: Check the cache
-        var coordinatesEither = getCityCoordinates(city);
-        if(coordinatesEither.isLeft()) {
-            return new Left<>(coordinatesEither.fromLeft(new Error("")));
+        HumidityResult humidityResult;
+
+        // Check whether the value exists in the cache
+        if(this.cache.getValue(String.format("%s_humidity", city)).isPresent()) {
+            humidityResult = (HumidityResult)this.cache.getValue(String.format("%s_humidity", city)).get();
+        } else {
+            var coordinatesEither = getCityCoordinates(city);
+            if (coordinatesEither.isLeft()) {
+                return new Left<>(coordinatesEither.fromLeft(new Error("")));
+            }
+
+            humidityResult = getCityHumidity(coordinatesEither.fromRight(new double[]{}));
+            this.cache.addValue(String.format("%s_humidity", city), humidityResult);
         }
 
-        var humidity = getCityHumidity(coordinatesEither.fromRight(new double[]{}));
-        // TODO: Save value onto the cache
-
+        var humidity = humidityResult.humidity;
         humidity += "%\n";
 
         return new Right<>(humidity);
     }
 
     public Either<Error, String> getWind(String city, Units units) throws IOException, InterruptedException {
-        // TODO: Check the cache
-        var coordinatesEither = getCityCoordinates(city);
-        if(coordinatesEither.isLeft()) {
-            return new Left<>(coordinatesEither.fromLeft(new Error("")));
-        }
+        WindResult windResult;
 
-        var wind = getCityWind(coordinatesEither.fromRight(new double[]{}));
-        // TODO: Save value onto the cache
+        // Check whether the value exists in the cache
+        if(this.cache.getValue(String.format("%s_wind", city)).isPresent()) {
+            windResult = (WindResult) this.cache.getValue(String.format("%s_wind", city)).get();
+        } else {
+            var coordinatesEither = getCityCoordinates(city);
+            if (coordinatesEither.isLeft()) {
+                return new Left<>(coordinatesEither.fromLeft(new Error("")));
+            }
+
+            windResult = getCityWind(coordinatesEither.fromRight(new double[]{}));
+            this.cache.addValue(String.format("%s_wind", city), windResult);
+        }
 
         // Convert wind speed(by default represented in m/s) according to the unit of measurement
         // 1 m/s = 2.23694 mph
         // 1 m/s = 3.6 kph
-        var wind_speed = wind.speed;
+        var wind_speed = windResult.speed;
         wind_speed = units == Units.IMPERIAL ? (wind_speed * 2.23694) : (wind_speed * 3.6);
 
-        var wind_direction = wind.direction;
-        var wind_icon = wind.icon;
+        var wind_direction = windResult.direction;
+        var wind_icon = windResult.icon;
 
         var fmt_wind = String.format("%.2f%s %s %s\n",
                 wind_speed,

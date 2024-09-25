@@ -1,12 +1,14 @@
 package com.ceticamarco.cache;
 
+import com.ceticamarco.Result.IResult;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Optional;
 
 public class Cache {
     private final int timeToLive;
-    private record cacheT(String value, LocalDateTime timestamp) {}
+    private record cacheT(IResult value, LocalDateTime timestamp) {}
     private final HashMap<String, cacheT> cache = new HashMap<>();
 
     /**
@@ -24,7 +26,7 @@ public class Cache {
     /**
      * Given a key and a value, store it in the cache
      */
-    public void addValue(String key, String value) {
+    public void addValue(String key, IResult value) {
         if(!isCacheEnabled()) { return; }
 
         var timestamp = LocalDateTime.now();
@@ -36,7 +38,7 @@ public class Cache {
      * Given a key, retrieve its value if and only if
      * it exists in the cache and it is not expired
      */
-    public Optional<String> getValue(String key) {
+    public Optional<IResult> getValue(String key) {
         if(!isCacheEnabled()) { return Optional.empty(); }
 
         cacheT cachedValue = this.cache.get(key);
@@ -55,15 +57,7 @@ public class Cache {
      * Given a key, remove it regardless of whether
      * it exists or not in the cache
      */
-    public void delvalue(String key) {
+    public void delValue(String key) {
         this.cache.remove(key);
-    }
-
-    /**
-     * Given a key, returns True if it is cached,
-     * False otherwise
-     */
-    public boolean iscached(String key) {
-        return this.cache.containsKey(key);
     }
 }
