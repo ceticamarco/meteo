@@ -147,7 +147,6 @@ public class MeteoService {
 
             windSpeed = root.get("wind").get("speed").asDouble();
             windDegree = root.get("wind").get("deg").asInt();
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -267,5 +266,42 @@ public class MeteoService {
         );
 
         return new Right<>(fmt_wind);
+    }
+
+    public Either<Error, String> getReport(String city, Units units, boolean toJson) throws IOException, InterruptedException {
+        // Get weather, humidity and wind
+        var weatherEither = getWeather(city, units);
+        var humidityEither = getHumidity(city);
+        var windEither = getWind(city, units);
+
+        // Check for errors
+        if(weatherEither.isLeft()) {
+            return weatherEither;
+        } else if(humidityEither.isLeft()) {
+            return humidityEither;
+        } else if(windEither.isLeft()) {
+            return windEither;
+        }
+
+        // Extract the actual value
+        var weather = weatherEither.fromRight("").replace("\n", "");
+        var humidity = humidityEither.fromRight("").replace("\n", "");
+        var wind = windEither.fromRight("").replace("\n", "");
+
+        // Build the result string according to the requested format
+        String report;
+        if(toJson) {
+            report = String.format("{\"Condition\": \"%s\", \"Humidity\": \"%s\", \"Wind\": \"%s\"}",
+                    weather, humidity, wind);
+        } else {
+            report = String.format("""
+                            Condition:  %s
+                            Humidity:   %s
+                            Wind:       %s
+                            """,
+                    weather, humidity, wind);
+        }
+
+        return new Right<>(report);
     }
 }

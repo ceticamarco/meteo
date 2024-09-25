@@ -58,7 +58,17 @@ public class MeteoController {
     }
 
     @GetMapping("/meteo/report/{city}")
-    public ResponseEntity<String> getWeatherReportByCity(@PathVariable("city") String city) {
-        return new ResponseEntity<>("Weather report", HttpStatus.OK);
+    public ResponseEntity<String> getWeatherReportByCity(@PathVariable("city") String city,
+                                                         @RequestParam(required = false) String i,
+                                                         @RequestParam(required = false) String j) throws IOException, InterruptedException {
+        Units units = i != null ? Units.IMPERIAL : Units.METRIC;
+        boolean toJson = j != null;
+
+        var result = meteoService.getReport(city, units, toJson);
+
+        switch (result) {
+            case Left<Error, String> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
+            case Right<Error, String> content -> { return new ResponseEntity<>(content.value(), HttpStatus.OK); }
+        }
     }
 }
