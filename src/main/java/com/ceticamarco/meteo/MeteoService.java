@@ -1,9 +1,12 @@
 package com.ceticamarco.meteo;
 
+import com.ceticamarco.cache.Cache;
 import com.ceticamarco.lambdatonic.Either;
 import com.ceticamarco.lambdatonic.Left;
 import com.ceticamarco.lambdatonic.Right;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -17,6 +20,7 @@ import java.util.Objects;
 
 @Service
 public class MeteoService {
+    private final Cache cache;
     private final String API_KEY;
     private final HashMap<String, String> conditionsMap = new HashMap<>();
     private record WeatherResult(double fahrenheit_t, double celsius_t, String emoji) {}
@@ -184,8 +188,9 @@ public class MeteoService {
         return new WindResult(windSpeed, windDirection, windIcon);
     }
 
-
-    public MeteoService() {
+    @Autowired
+    public MeteoService(@Value("${cache.ttl}") int ttl) {
+        this.cache = new Cache(ttl);
         // Read OpenWeatherMap API token
         this.API_KEY = System.getenv("METEO_TOKEN");
         // Set condition-emoji hashmap
