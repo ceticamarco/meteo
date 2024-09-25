@@ -3,8 +3,6 @@
 `tmux` status bar. This service is written in Java using Spring Boot and relies on 
 [OpenWeatherMap](https://openweathermap.org) to retrieve meteorological data.
 
-![](./.screenshot.png)
-
 ## Usage
 As an HTTP service, **Meteo** can be queried through any HTTP client, for example by using your browser or `cURL`. 
 To retrieve the weather conditions of your city, send a `GET` request to the following endpoint specifying the city

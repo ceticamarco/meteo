@@ -1,8 +1,8 @@
-name: bit
+name: meteo
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
