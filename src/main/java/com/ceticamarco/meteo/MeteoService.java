@@ -190,10 +190,10 @@ public class MeteoService {
     }
 
     @Autowired
-    public MeteoService(@Value("${cache.ttl}") int ttl) {
+    public MeteoService(@Value("${meteo.cache.ttl}") int ttl, @Value("${meteo.token}") String token) {
         this.cache = new Cache(ttl);
         // Read OpenWeatherMap API token
-        this.API_KEY = System.getenv("METEO_TOKEN");
+        this.API_KEY = token;
         // Set condition-emoji hashmap
         this.conditionsMap.put("Thunderstorm", "⛈️");
         this.conditionsMap.put("Drizzle", "🌦 ");

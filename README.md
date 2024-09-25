@@ -84,8 +84,8 @@ To minimize the amount of calls to the OpenWeatherMap servers, **Meteo** stores 
 built-in, in-memory cache data structure. Each time a client requests the weather of a given location, **Meteo**
 tries to search it first on the cache; if it is found, the cached value is returned otherwise a new API call is
 performed and the retrieved value is inserted in the cache before being returned to the client. The expiration time, expressed
-in hours, is controlled by setting an environment variable(`METEO_CACHE_TTL`). After a cached value 
-is expired, **Meteo** must retrieve it directly from OpenWeatherMap servers.
+in hours, is controlled by setting an environment variable(`METEO_CACHE_TTL`). After the cached value
+is expired, **Meteo** must retrieve the weather data directly from OpenWeatherMap servers.
 
 You can disable the cache by setting the `METEO_CACHE_TTL` variable to any non-positive value.
 
@@ -95,16 +95,15 @@ it allows to reduce the amount of API calls per day(which is quite important if 
 ## Configuration
 Before deploying the service, you must configure the following properties:
 
-| Variable               | Meaning                                |
-|------------------------|----------------------------------------|
-| `METEO_LISTEN_ADDRESS` | Listen address                         |
-| `METEO_LISTEN_PORT`    | Listen port                            |
-| `METEO_TOKEN`          | OpenWeatherMap API key                 |
-| `METEO_CACHE_TTL`      | Cache time-to-live(expressed in hours) |
+| Variable             | Meaning                                |
+|----------------------|----------------------------------------|
+| `SERVER_PORT`        | Listen port                            |
+| `METEO_TOKEN`        | OpenWeatherMap API key                 |
+| `METEO_CACHE_TTL`    | Cache time-to-live(expressed in hours) |
 
 Each value must be set _before_ launching the application by exporting them as environment variable. If you plan to 
 deploy the service using Docker, you can specify the previous variables by editing the `compose.yml`
-file, otherwise you can manually export them(i.e., `export METEO_LISTEN_ADDRESS='127.0.0.1'`).
+file, otherwise you can set them by editing the `application.properties` file.
 
 In order to use this service, you will also need an OpenWeatherMap API key. You can get one by following the
 instructions [on their website](https://openweathermap.org/api).
@@ -114,7 +113,7 @@ The easiest way to deploy **Meteo** is by using Docker. In order to launch it, i
 ```sh
 $> docker compose up -d
 ```
-This will build the container image and then launch it. By default the service will be available on `127.0.0.1:9000`
+This will build the container image and then launch it. By default the service will be available on `127.0.0.1:3000`
 but you can easily change this property by modifying the associated environment variable(see section above).
 
 ## License
