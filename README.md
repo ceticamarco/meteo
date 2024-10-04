@@ -8,6 +8,7 @@ As an HTTP service, **Meteo** can be queried through any HTTP client, for exampl
 To retrieve the weather conditions of your city, send a `GET` request to the following endpoint specifying the city
 in the URL. For example:
 
+### Weather
 ```sh
 $> curl 'http://127.0.0.1:9000/meteo/Rome'
 ☀️  +35°C
@@ -27,6 +28,7 @@ If your city consists of two or more words, you can format the URL as follows:
 $> curl 'http://127.0.0.1:9000/meteo/Buenos+Aires'
 ```
 
+### Humidity
 **Meteo** can also be used to retrieve the percentage of humidity, the wind speed and the wind direction. Below
 there is an example:
 
@@ -36,6 +38,7 @@ $> curl 'http://127.0.0.1:9000/meteo/humidity/amsterdam'
 75%
 ```
 
+### Wind
 ```sh
 # Retrieve wind speed of Macao
 $> curl 'http://127.0.0.1:9000/meteo/wind/macao'
@@ -50,6 +53,7 @@ $> curl 'http://127.0.0.1:9000/meteo/wind/macao?i'
 12.66mph SE ↖
 ```
 
+### Report
 You can also request all the previous data together by querying the following endpoint:
 
 ```sh
@@ -75,6 +79,20 @@ $> curl 'http://127.0.0.1:9000/meteo/report/Montecarlo?j' # Metric version
 {"Condition": "\u2600\ufe0f +35\u00b0C", "Humidity": "33%", "Wind": "19.3kph SW \u2197"}
 $> curl 'http://127.0.0.1:9000/meteo/report/Montecarlo?j&i' # Imperial version
 {"Condition": "\u2600\ufe0f +95\u00b0F", "Humidity": "33%", "Wind": "11.99mph SW \u2197"}
+```
+
+### Forecast
+Finally, you can request the weather forecast of the next five days using the following interface:
+
+```sh
+$> curl '127.0.0.1:3000/meteo/forecast/paris' # Metric version 
+Fri 04/10 -> ☀️  +13°C
+Sat 05/10 -> ☁️  +16°C
+Sun 06/10 -> 🌧  +14°C
+Mon 07/10 -> 🌧  +17°C
+Tue 08/10 -> 🌧  +18°C
+curl '127.0.0.1:3000/meteo/forecast/paris?i' # Imperial + JSON version
+{"forecast":[{"Fri 04/10":"☀️  +55°F"},{"Sat 05/10":"☁️  +61°F"},{"Sun 06/10":"🌧  +57°F"},{"Mon 07/10":"🌧  +62°F"},{"Tue 08/10":"🌧  +64°F"}]}%
 ```
 
 ## Cache

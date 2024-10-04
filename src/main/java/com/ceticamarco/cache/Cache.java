@@ -31,7 +31,7 @@ public class Cache {
 
         var timestamp = LocalDateTime.now();
         var cachedValue = new cacheT(value, timestamp);
-        this.cache.put(key, cachedValue);
+        this.cache.put(key.toLowerCase(), cachedValue);
     }
 
     /**
@@ -41,7 +41,7 @@ public class Cache {
     public Optional<IResult> getValue(String key) {
         if(!isCacheEnabled()) { return Optional.empty(); }
 
-        cacheT cachedValue = this.cache.get(key);
+        cacheT cachedValue = this.cache.get(key.toLowerCase());
         if(cachedValue == null) { return Optional.empty(); }
 
         var timestamp = cachedValue.timestamp;

@@ -1,8 +1,6 @@
 package com.ceticamarco.meteo;
 
-import com.ceticamarco.Result.HumidityResult;
-import com.ceticamarco.Result.WeatherResult;
-import com.ceticamarco.Result.WindResult;
+import com.ceticamarco.Result.*;
 import com.ceticamarco.cache.Cache;
 import com.ceticamarco.lambdatonic.Either;
 import com.ceticamarco.lambdatonic.Left;
@@ -10,6 +8,7 @@ import com.ceticamarco.lambdatonic.Right;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -17,7 +16,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalTime;
+import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -48,10 +49,8 @@ public class MeteoService {
             var arrayNode = objectMapper.readTree(jsonRes.body());
             var firstElement = arrayNode.get(0);
 
-            var lat = firstElement.get("lat").asDouble();
-            var lon = firstElement.get("lon").asDouble();
-            coordinates[0] = lat;
-            coordinates[1] = lon;
+            coordinates[0] = firstElement.get("lat").asDouble(); // latitude
+            coordinates[1] = firstElement.get("lon").asDouble(); // longitude
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -75,7 +74,10 @@ public class MeteoService {
     }
 
     private WeatherResult getCityWeather(double[] coordinates) throws IOException, InterruptedException {
-        String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
+        String api_uri = String.format("https://api.openweathermap.org/data/3.0/onecall?units=metric"+
+                        "&lat=%f&lon=%f"+
+                        "&appid=%s"+
+                        "&exclude=minutely,hourly,daily,alerts",
                 coordinates[0], coordinates[1], API_KEY);
         HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -91,8 +93,8 @@ public class MeteoService {
             var objectMapper = new ObjectMapper();
             var root = objectMapper.readTree(jsonRes.body());
 
-            var condition = root.get("weather").get(0).get("main").asText();
-            var celsius_t = Math.round(root.get("main").get("temp").asDouble());
+            var condition = root.get("current").get("weather").get(0).get("main").asText();
+            var celsius_t = Math.round(root.get("current").get("temp").asDouble());
             var fahrenheit_t = Math.round((celsius_t * 1.8) + 32);
 
             weatherResult = new WeatherResult(fahrenheit_t, celsius_t, getEmojiFromCondition(condition));
@@ -106,7 +108,10 @@ public class MeteoService {
     }
 
     public HumidityResult getCityHumidity(double[] coordinates) throws IOException, InterruptedException {
-        String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
+        String api_uri = String.format("https://api.openweathermap.org/data/3.0/onecall?units=metric"+
+                        "&lat=%f&lon=%f"+
+                        "&appid=%s"+
+                        "&exclude=minutely,hourly,daily,alerts",
                 coordinates[0], coordinates[1], API_KEY);
         HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -122,7 +127,7 @@ public class MeteoService {
             var objectMapper = new ObjectMapper();
             var root = objectMapper.readTree(jsonRes.body());
 
-            humidity = new HumidityResult(root.get("main").get("humidity").asText());
+            humidity = new HumidityResult(root.get("current").get("humidity").asText());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -133,7 +138,10 @@ public class MeteoService {
     }
 
     private WindResult getCityWind(double[] coordinates) throws IOException, InterruptedException {
-        String api_uri = String.format("https://api.openweathermap.org/data/2.5/weather?units=metric&lat=%f&lon=%f&appid=%s",
+        String api_uri = String.format("https://api.openweathermap.org/data/3.0/onecall?units=metric"+
+                        "&lat=%f&lon=%f"+
+                        "&appid=%s"+
+                        "&exclude=minutely,hourly,daily,alerts",
                 coordinates[0], coordinates[1], API_KEY);
         HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -150,8 +158,8 @@ public class MeteoService {
             var objectMapper = new ObjectMapper();
             var root = objectMapper.readTree(jsonRes.body());
 
-            windSpeed = root.get("wind").get("speed").asDouble();
-            windDegree = root.get("wind").get("deg").asInt();
+            windSpeed = root.get("current").get("wind_speed").asDouble();
+            windDegree = root.get("current").get("wind_deg").asInt();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -187,6 +195,52 @@ public class MeteoService {
         httpClient.close();
 
         return new WindResult(windSpeed, windDirection, windIcon);
+    }
+
+    private ForecastResult getCityForecast(double[] coordinates) throws IOException, InterruptedException {
+        String api_uri = String.format("https://api.openweathermap.org/data/3.0/onecall?units=metric"+
+                        "&lat=%f&lon=%f"+
+                        "&appid=%s"+
+                        "&exclude=current,minutely,hourly,alerts",
+                coordinates[0], coordinates[1], API_KEY);
+        HttpClient httpClient = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(api_uri))
+                .GET()
+                .build();
+
+        HttpResponse<String> jsonRes = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        ForecastTuple[] forecast = new ForecastTuple[5];
+        try {
+            var objectMapper = new ObjectMapper();
+            var root = objectMapper.readTree(jsonRes.body());
+
+            // Get first 5 elements of forecast array(first 5 days)
+            var forecastList = root.get("daily");
+            final var MAX_COUNT = 5;
+            if(forecastList.isArray()) {
+                for(int idx = 0; idx < MAX_COUNT; idx++) {
+                    var jsonNode = forecastList.get(idx);
+
+                    // Get forecast date and format it as '<DAY_OF_THE_WEEK> dd/MM'
+                    var dateTime = LocalDate.ofInstant(Instant.ofEpochSecond(jsonNode.get("dt").asLong()), ZoneId.systemDefault());
+                    var date = dateTime.format(DateTimeFormatter.ofPattern("EEE dd/MM"));
+                    // Get forecast temperature and condition
+                    var temp = jsonNode.get("temp").get("day").asDouble();
+                    var cond = jsonNode.get("weather").get(0).get("main").asText();
+
+                    forecast[idx] = new ForecastTuple(date, temp, this.conditionsMap.get(cond));
+                }
+            }
+        } catch(Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        httpClient.close();
+
+        return new ForecastResult(forecast);
     }
 
     @Autowired
@@ -227,8 +281,8 @@ public class MeteoService {
             this.cache.addValue(String.format("%s_weather", city), weatherResult);
         }
 
-        var emoji = weatherResult.emoji;
-        var temperature = units == Units.METRIC ? weatherResult.celsius_t : weatherResult.fahrenheit_t;
+        var emoji = weatherResult.emoji();
+        var temperature = units == Units.METRIC ? weatherResult.celsius_temp() : weatherResult.fahrenheit_temp();
         var fmt_temp = temperature > 0.0 ? String.format("+%d", (int)temperature) : String.valueOf((int)temperature);
         var fmt_units = units == Units.METRIC ? 'C' : 'F';
         var fmt_weather = String.format("%s %s°%c\n", emoji, fmt_temp, fmt_units);
@@ -252,7 +306,7 @@ public class MeteoService {
             this.cache.addValue(String.format("%s_humidity", city), humidityResult);
         }
 
-        var humidity = humidityResult.humidity;
+        var humidity = humidityResult.humidity();
         humidity += "%\n";
 
         return new Right<>(humidity);
@@ -277,11 +331,11 @@ public class MeteoService {
         // Convert wind speed(by default represented in m/s) according to the unit of measurement
         // 1 m/s = 2.23694 mph
         // 1 m/s = 3.6 kph
-        var wind_speed = windResult.speed;
+        var wind_speed = windResult.speed();
         wind_speed = units == Units.IMPERIAL ? (wind_speed * 2.23694) : (wind_speed * 3.6);
 
-        var wind_direction = windResult.direction;
-        var wind_icon = windResult.icon;
+        var wind_direction = windResult.direction();
+        var wind_icon = windResult.icon();
 
         var fmt_wind = String.format("%.2f%s %s %s\n",
                 wind_speed,
@@ -293,7 +347,7 @@ public class MeteoService {
         return new Right<>(fmt_wind);
     }
 
-    public Either<Error, String> getReport(String city, Units units, boolean toJson) throws IOException, InterruptedException {
+    public Either<Error, ApiResult> getReport(String city, Units units, boolean toJson) throws IOException, InterruptedException {
         // Get weather, humidity and wind
         var weatherEither = getWeather(city, units);
         var humidityEither = getHumidity(city);
@@ -301,11 +355,11 @@ public class MeteoService {
 
         // Check for errors
         if(weatherEither.isLeft()) {
-            return weatherEither;
+            return new Left<>(weatherEither.fromLeft(new Error()));
         } else if(humidityEither.isLeft()) {
-            return humidityEither;
+            return new Left<>(humidityEither.fromLeft(new Error()));
         } else if(windEither.isLeft()) {
-            return windEither;
+            return new Left<>(windEither.fromLeft(new Error()));
         }
 
         // Extract the actual value
@@ -327,6 +381,62 @@ public class MeteoService {
                     weather, humidity, wind);
         }
 
-        return new Right<>(report);
+        return new Right<>(new ApiResult(report, toJson ? MediaType.APPLICATION_JSON : new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8)));
+    }
+
+    public Either<Error, ApiResult> getForecast(String city, Units units, boolean toJson) throws IOException, InterruptedException {
+        ForecastResult forecastResult;
+
+        // Check whether the value exists in the cache
+        if(this.cache.getValue(String.format("%s_forecast", city)).isPresent()) {
+            forecastResult = (ForecastResult) this.cache.getValue(String.format("%s_forecast", city)).get();
+        } else {
+            var coordinatesEither = getCityCoordinates(city);
+            if (coordinatesEither.isLeft()) {
+                return new Left<>(coordinatesEither.fromLeft(new Error("")));
+            }
+
+            forecastResult = getCityForecast(coordinatesEither.fromRight(new double[]{}));
+            this.cache.addValue(String.format("%s_forecast", city), forecastResult);
+        }
+
+        // Extract the week weather forecast
+        ForecastTuple[] forecastTuple = forecastResult.forecastTuple();
+
+        var objectMapper = new ObjectMapper();
+        var rootNode = objectMapper.createObjectNode();
+        var arrayNode = objectMapper.createArrayNode();
+        StringBuilder fmt_forecast = new StringBuilder();
+        String forecast = "";
+
+        for (ForecastTuple weather : forecastTuple) {
+            var date = weather.date();
+            var temperature = units == Units.IMPERIAL
+                    ? Math.round((weather.temperature() * 1.8) + 32)
+                    : Math.round(weather.temperature());
+            var emoji = weather.emoji();
+
+            var fmt_temp = temperature > 0.0 ? String.format("+%d", (int) temperature) : String.valueOf((int) temperature);
+            var fmt_units = units == Units.METRIC ? 'C' : 'F';
+
+            if(toJson) {
+                var forecastObject = objectMapper.createObjectNode();
+                forecastObject.put(date, String.format("%s %s°%s", emoji, fmt_temp, fmt_units));
+                arrayNode.add(forecastObject);
+            } else {
+                fmt_forecast.append(String.format("%s -> %s %s°%s\n",
+                        date, emoji, fmt_temp, fmt_units
+                ));
+            }
+
+            if(toJson) {
+                rootNode.set("forecast", arrayNode);
+                forecast = rootNode.toString();
+            } else {
+                forecast = fmt_forecast.toString();
+            }
+        }
+
+        return new Right<>(new ApiResult(forecast, (toJson ? MediaType.APPLICATION_JSON : new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))));
     }
 }

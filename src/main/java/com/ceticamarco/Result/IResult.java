@@ -5,4 +5,4 @@ package com.ceticamarco.Result;
  * a <i>Result</i> can either be a <i>WeatherResult</i>, <i>WindResult</i>
  * or a <i>HumidityResult</i>.
  */
-public sealed interface IResult permits WeatherResult, WindResult, HumidityResult { }
+public sealed interface IResult permits WeatherResult, WindResult, HumidityResult, ForecastResult { }

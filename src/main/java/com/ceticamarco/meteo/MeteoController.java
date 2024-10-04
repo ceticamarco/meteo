@@ -1,9 +1,11 @@
 package com.ceticamarco.meteo;
 
+import com.ceticamarco.Result.ApiResult;
 import com.ceticamarco.lambdatonic.Left;
 import com.ceticamarco.lambdatonic.Right;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,8 +69,23 @@ public class MeteoController {
         var result = meteoService.getReport(city, units, toJson);
 
         switch (result) {
-            case Left<Error, String> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
-            case Right<Error, String> content -> { return new ResponseEntity<>(content.value(), HttpStatus.OK); }
+            case Left<Error, ApiResult> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
+            case Right<Error, ApiResult> content -> { return ResponseEntity.ok().contentType(content.value().mediaType()).body(content.value().result()); }
+        }
+    }
+
+    @GetMapping("/meteo/forecast/{city}")
+    public ResponseEntity<String> getWeatherForecastByCity(@PathVariable("city") String city,
+                                                           @RequestParam(required = false) String i,
+                                                           @RequestParam(required = false) String j) throws IOException, InterruptedException {
+        Units units = i != null ? Units.IMPERIAL : Units.METRIC;
+        boolean toJson = j != null;
+
+        var result = meteoService.getForecast(city, units, toJson);
+
+        switch (result) {
+            case Left<Error, ApiResult> err -> { return new ResponseEntity<>(err.value().getMessage(), HttpStatus.BAD_REQUEST); }
+            case Right<Error, ApiResult> content -> { return ResponseEntity.ok().contentType(content.value().mediaType()).body(content.value().result()); }
         }
     }
 }
